@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Systems Mapping Workshop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #002B5B;
+            --secondary: #256D85;
+            --accent: #00D7FF;
+            --background: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.8);
+            --energy-color: #fbbf24;
+            --water-color: #38bdf8;
+            --brine-color: #94a3b8;
+            --cost-color: #f87171;
+            --success: #22c55e;
+            --text: #f8fafc;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr 280px;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        h2 { font-family: 'Poppins'; font-size: 16px; color: var(--accent); margin-top: 0; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .step { margin-bottom: 12px; padding-left: 28px; position: relative; font-size: 12px; color: #cbd5e1; line-height: 1.4; }
+        .step-num { 
+            position: absolute; left: 0; top: -2px; 
+            width: 20px; height: 20px; background: var(--accent); 
+            border-radius: 50%; color: var(--primary); 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; font-size: 11px;
+        }
+
+        .ref-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .ref-title { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
+        .ref-label { color: #94a3b8; }
+        .ref-val { color: white; text-align: right; font-weight: 600; }
+
+        .control-group { margin-bottom: 20px; }
+        .control-label { font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: block; text-transform: uppercase; }
+        select {
+            width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155;
+            color: white; border-radius: 10px; font-family: 'Inter'; outline: none; transition: border 0.3s;
+        }
+        select:focus { border-color: var(--accent); }
+
+        .main-viz {
+            position: relative;
+            background: rgba(0,0,0,0.3);
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .header-bar {
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .timer { font-family: 'Poppins'; font-weight: 700; color: var(--cost-color); font-size: 32px; letter-spacing: -1px; }
+
+        .system-svg { flex-grow: 1; width: 100%; padding: 20px; }
+        
+        .gauges {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 20px; padding: 25px 30px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 0 0 30px 30px;
+        }
+        .gauge-item { 
+            background: rgba(30, 41, 59, 0.6); 
+            padding: 20px; 
+            border-radius: 16px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            position: relative;
+        }
+        .gauge-item:hover {
+            transform: translateY(-5px);
+            background: rgba(30, 41, 59, 0.9);
+        }
+        .gauge-val { font-size: 28px; font-weight: 800; display: block; font-family: 'Poppins'; pointer-events: none; }
+        .gauge-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-top: 5px; display: block; pointer-events: none; }
+
+        .info-box {
+            position: absolute;
+            bottom: 105%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            background: #1e293b;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.4;
+            border: 1px solid var(--accent);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+            text-align: left;
+        }
+        .gauge-item:active .info-box, .gauge-item:hover .info-box {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .flow-line { fill: none; stroke-width: 4; stroke-dasharray: 10, 15; animation: flow 2s linear infinite; transition: all 0.5s ease; }
+        @keyframes flow { to { stroke-dashoffset: -50; } }
+
+        .node-rect { transition: all 0.5s ease; stroke-width: 2; }
+        .node-text { font-family: 'Poppins'; font-weight: 600; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="panel">
+        <h2><i class="fas fa-graduation-cap"></i> WORKSHOP GUIDE</h2>
+        
+        <div class="ref-box">
+            <span class="ref-title">System Reference Data</span>
+            <div class="ref-grid">
+                <span class="ref-label">Input Ratio:</span><span class="ref-val">2.5L Sea Water</span>
+                <span class="ref-label">Output Ratio:</span><span class="ref-val">1L Fresh / 1.5L Brine</span>
+                <span class="ref-label">Avg. Energy:</span><span class="ref-val">3.5 kWh/m³</span>
+                <span class="ref-label">Brine Salinity:</span><span class="ref-val">~65,000 ppm</span>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">1</div>
+            <strong>Analyze Data:</strong> Note the 1.5:1 Brine-to-Water ratio above. 
+        </div>
+
+        <div class="step">
+            <div class="step-num">2</div>
+            <strong>Wire Inputs:</strong> Adjust the Energy and Economy toggles on the right.
+        </div>
+
+        <div class="step">
+            <div class="step-num">3</div>
+            <strong>Assess Outputs:</strong> Monitor the results in the center visualization.
+        </div>
+
+        <div class="step">
+            <div class="step-num">4</div>
+            <strong>Synthesize:</strong> Can you achieve <strong>100% Water Security</strong> without causing ecological harm (Marine/Carbon)?
+        </div>
+
+        <div style="margin-top: auto; padding: 15px; background: rgba(0, 215, 255, 0.05); border-radius: 12px; border: 1px solid rgba(0, 215, 255, 0.1);">
+            <p style="font-size: 11px; margin: 0; color: var(--accent); font-style: italic;">
+                "Systems thinking is about the relationships between parts, not just the parts themselves."
+            </p>
+        </div>
+    </div>
+
+    <div class="main-viz">
+        <div class="header-bar">
+            <div>
+                <h1 style="margin:0; font-family: 'Poppins'; font-size: 28px; letter-spacing: -0.5px;">SYSTEMS MAPPING SIMULATOR</h1>
+                <span id="system-status" style="color: var(--success); font-size: 13px; font-weight: 700; text-transform: uppercase;">● STATUS: OPTIMIZED</span>
+            </div>
+            <div class="timer" id="timer">10:00</div>
+        </div>
+
+        <svg class="system-svg" viewBox="0 0 800 500" id="svg-map">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <rect x="325" y="180" width="150" height="120" rx="15" fill="var(--primary)" stroke="var(--accent)" stroke-width="3" class="node-rect" filter="url(#glow)" />
+            <text x="400" y="240" text-anchor="middle" fill="white" font-size="20" class="node-text">DESAL HUB</text>
+            <text x="400" y="265" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="bold">PROCESSING</text>
+
+            <g id="node-energy">
+                <rect x="50" y="80" width="160" height="60" rx="10" class="node-rect" fill="rgba(251, 191, 36, 0.1)" stroke="var(--energy-color)" />
+                <text x="130" y="115" text-anchor="middle" fill="var(--energy-color)" class="node-text" font-size="14">ENERGY SOURCE</text>
+                <path id="path-energy" d="M 210 110 Q 300 110 325 190" class="flow-line" stroke="var(--energy-color)" />
+            </g>
+
+            <g id="node-economy">
+                <rect x="50" y="360" width="160" height="60" rx="10" class="node-rect" fill="rgba(248, 113, 113, 0.1)" stroke="var(--cost-color)" />
+                <text x="130" y="395" text-anchor="middle" fill="var(--cost-color)" class="node-text" font-size="14">STATE FUNDING</text>
+                <path id="path-cost" d="M 210 390 Q 300 390 325 290" class="flow-line" stroke="var(--cost-color)" />
+            </g>
+
+            <g id="node-water">
+                <rect x="590" y="80" width="160" height="60" rx="10" class="node-rect" fill="rgba(56, 189, 248, 0.1)" stroke="var(--water-color)" />
+                <text x="670" y="115" text-anchor="middle" fill="var(--water-color)" class="node-text" font-size="14">WATER OUTPUT</text>
+                <path id="path-water" d="M 475 190 Q 500 110 590 110" class="flow-line" stroke="var(--water-color)" />
+            </g>
+
+            <g id="node-brine">
+                <rect x="590" y="360" width="160" height="60" rx="10" class="node-rect" fill="rgba(148, 163, 184, 0.1)" stroke="var(--brine-color)" />
+                <text x="670" y="395" text-anchor="middle" fill="var(--brine-color)" class="node-text" font-size="14">BRINE WASTE</text>
+                <path id="path-brine" d="M 475 290 Q 500 390 590 390" class="flow-line" stroke="var(--brine-color)" />
+            </g>
+
+            <text x="270" y="140" fill="#94a3b8" font-size="10" font-weight="bold" transform="rotate(-25 270,140)">CARBON FLOW</text>
+            <text x="530" y="340" fill="#94a3b8" font-size="10" font-weight="bold" transform="rotate(25 530,340)">ECOLOGICAL LOAD</text>
+        </svg>
+
+        <div class="gauges">
+            <div class="gauge-item">
+                <div class="info-box"><strong>Water Security:</strong> The certainty of continuous supply. 100% means total reliance; lower values indicate supply variability (e.g., Solar dependence).</div>
+                <span class="gauge-val" id="val-security" style="color: var(--water-color);">100%</span>
+                <span class="gauge-label">Water Security</span>
+            </div>
+            <div class="gauge-item">
+                <div class="info-box"><strong>Emission Profile:</strong> The atmospheric carbon impact. High values contribute to global climate change and local air quality issues.</div>
+                <span class="gauge-val" id="val-carbon" style="color: var(--energy-color);">MODERATE</span>
+                <span class="gauge-label">Emission Profile</span>
+            </div>
+            <div class="gauge-item">
+                <div class="info-box"><strong>Marine Resilience:</strong> The health of the local coastal ecosystem. "At Risk" indicates the brine discharge is harming local biodiversity.</div>
+                <span class="gauge-val" id="val-marine" style="color: var(--success);">STABLE</span>
+                <span class="gauge-label">Marine Resilience</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2><i class="fas fa-sliders"></i> SYSTEM WIRING</h2>
+        
+        <div class="control-group" style="margin-top: 10px;">
+            <label class="control-label">Energy Source Input</label>
+            <select id="energy-select">
+                <option value="gas">Natural Gas (Mid CO2 / High Reliability)</option>
+                <option value="hybrid">Hybrid (Solar + Gas) [Balanced]</option>
+                <option value="solar">Solar Farm (Zero CO2 / Variable)</option>
+                <option value="oil">Heavy Oil (High CO2 / High Reliability)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Brine Treatment Logic</label>
+            <select id="brine-select">
+                <option value="direct">Direct Point Discharge (Toxic)</option>
+                <option value="diffuser">Deep Sea Diffusers (Buffered)</option>
+                <option value="zero">Zero Liquid Discharge (Neutral)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">State Fiscal Policy</label>
+            <select id="econ-select">
+                <option value="subsidized">Full State Subsidy</option>
+                <option value="market">Market Rate Pricing</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * SIMULATOR LOGIC
+     * Handles all system interactions and UI updates.
+     */
+    const Simulator = {
+        init() {
+            // Initial call to set default UI state
+            this.updateSystem();
+            this.setupEventListeners();
+            this.startTimer();
+        },
+
+        setupEventListeners() {
+            const ids = ['energy-select', 'brine-select', 'econ-select'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    // Using 'input' event for better responsiveness in some browsers
+                    el.addEventListener('change', () => this.updateSystem());
+                    el.addEventListener('input', () => this.updateSystem());
+                }
+            });
+        },
+
+        updateSystem() {
+            const eSelect = document.getElementById('energy-select');
+            const bSelect = document.getElementById('brine-select');
+            const ecSelect = document.getElementById('econ-select');
+
+            if (!eSelect || !bSelect || !ecSelect) return;
+
+            const energy = eSelect.value;
+            const brine = bSelect.value;
+            const econ = ecSelect.value;
+            
+            const carbonVal = document.getElementById('val-carbon');
+            const marineVal = document.getElementById('val-marine');
+            const securityVal = document.getElementById('val-security');
+            const statusText = document.getElementById('system-status');
+            
+            const pathEnergy = document.getElementById('path-energy');
+            const pathBrine = document.getElementById('path-brine');
+
+            // --- 1. ENERGY LOGIC ---
+            switch(energy) {
+                case 'solar':
+                    carbonVal.textContent = 'ZERO';
+                    carbonVal.style.color = 'var(--success)';
+                    pathEnergy.style.stroke = 'var(--success)';
+                    securityVal.textContent = '85%'; 
+                    securityVal.style.color = 'var(--energy-color)';
+                    break;
+                case 'hybrid':
+                    carbonVal.textContent = 'LOW';
+                    carbonVal.style.color = 'var(--accent)';
+                    pathEnergy.style.stroke = 'var(--accent)';
+                    securityVal.textContent = '100%';
+                    securityVal.style.color = 'var(--success)';
+                    break;
+                case 'gas':
+                    carbonVal.textContent = 'MODERATE';
+                    carbonVal.style.color = 'var(--energy-color)';
+                    pathEnergy.style.stroke = 'var(--energy-color)';
+                    securityVal.textContent = '100%';
+                    securityVal.style.color = 'var(--success)';
+                    break;
+                case 'oil':
+                    carbonVal.textContent = 'CRITICAL';
+                    carbonVal.style.color = 'var(--cost-color)';
+                    pathEnergy.style.stroke = 'var(--cost-color)';
+                    securityVal.textContent = '100%';
+                    securityVal.style.color = 'var(--success)';
+                    break;
+            }
+
+            // --- 2. BRINE LOGIC ---
+            switch(brine) {
+                case 'zero':
+                    marineVal.textContent = 'PRISTINE';
+                    marineVal.style.color = 'var(--accent)';
+                    pathBrine.style.stroke = 'var(--accent)';
+                    pathBrine.style.animationDuration = '0s'; // Stop the "flow"
+                    break;
+                case 'diffuser':
+                    marineVal.textContent = 'STABLE';
+                    marineVal.style.color = 'var(--success)';
+                    pathBrine.style.stroke = 'var(--success)';
+                    pathBrine.style.animationDuration = '3s';
+                    break;
+                case 'direct':
+                    marineVal.textContent = 'AT RISK';
+                    marineVal.style.color = 'var(--cost-color)';
+                    pathBrine.style.stroke = 'var(--cost-color)';
+                    pathBrine.style.animationDuration = '1s'; // High speed toxic flow
+                    break;
+            }
+
+            // --- 3. OVERALL SYSTEM STATUS ---
+            if (energy === 'oil' && brine === 'direct') {
+                statusText.textContent = '● STATUS: ECOLOGICAL COLLAPSE';
+                statusText.style.color = 'var(--cost-color)';
+            } else if (econ === 'subsidized' && (brine === 'zero' || energy === 'hybrid')) {
+                statusText.textContent = '● STATUS: HIGH FISCAL PRESSURE';
+                statusText.style.color = 'var(--energy-color)';
+            } else if (energy === 'solar') {
+                statusText.textContent = '● STATUS: SUPPLY INTERMITTENCY';
+                statusText.style.color = 'var(--energy-color)';
+            } else {
+                statusText.textContent = '● STATUS: OPTIMIZED';
+                statusText.style.color = 'var(--success)';
+            }
+        },
+
+        startTimer() {
+            let time = 600; // 10 minutes
+            const timerDisplay = document.getElementById('timer');
+            const timerInterval = setInterval(() => {
+                if (time > 0) {
+                    time--;
+                    const m = Math.floor(time/60);
+                    const s = time%60;
+                    timerDisplay.textContent = `${m}:${s<10?'0':''}${s}`;
+                    if (time < 60) timerDisplay.style.color = 'var(--cost-color)';
+                } else {
+                    clearInterval(timerInterval);
+                    timerDisplay.textContent = "DONE";
+                }
+            }, 1000);
+        }
+    };
+
+    // Execution entry point
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => Simulator.init());
+    } else {
+        Simulator.init();
+    }
+</script>
+
+</body>
+</html>
